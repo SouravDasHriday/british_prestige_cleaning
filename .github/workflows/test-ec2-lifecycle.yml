@@ -1,7 +1,7 @@
 name: Test EC2 Start and Stop Lifecycle
 
 on:
-  workflow_dispatch: # Allows manual trigger from GitHub UI
+  workflow_dispatch:
 
 jobs:
   start-ec2:
@@ -17,16 +17,29 @@ jobs:
 
       - name: Start Instance and Wait
         run: |
-          echo "Sending start signal to EC2..."
           aws ec2 start-instances --instance-ids ${{ secrets.EC2_INSTANCE_ID }}
-
-          echo "Waiting for instance to reach running state..."
           aws ec2 wait instance-running --instance-ids ${{ secrets.EC2_INSTANCE_ID }}
-          echo "Instance is active and ready."
+
+  # NEW JOB ADDED HERE
+  execute-on-ec2:
+    name: Run Commands on EC2
+    needs: start-ec2
+    runs-on: [self-hosted, linux, X64]
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Verify Environment
+        run: |
+          echo "Currently running on: $(hostname)"
+          echo "Listing repository files:"
+          ls -la
+          echo "Verifying Docker access:"
+          docker info
 
   stop-ec2:
     name: Stop EC2 Builder
-    needs: start-ec2
+    needs: execute-on-ec2 # UPDATED TO WAIT FOR THE NEW JOB
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -38,7 +51,4 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Stop Instance
-        run: |
-          echo "Sending shutdown signal to EC2..."
-          aws ec2 stop-instances --instance-ids ${{ secrets.EC2_INSTANCE_ID }}
-          echo "Shutdown command issued."
+        run: aws ec2 stop-instances --instance-ids ${{ secrets.EC2_INSTANCE_ID }}
