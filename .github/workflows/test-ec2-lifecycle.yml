@@ -1,0 +1,44 @@
+name: Test EC2 Start and Stop Lifecycle
+
+on:
+  workflow_dispatch: # Allows manual trigger from GitHub UI
+
+jobs:
+  start-ec2:
+    name: Start EC2 Builder
+    runs-on: ubuntu-latest
+    steps:
+      - name: Authenticate to AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Start Instance and Wait
+        run: |
+          echo "Sending start signal to EC2..."
+          aws ec2 start-instances --instance-ids ${{ secrets.EC2_INSTANCE_ID }}
+
+          echo "Waiting for instance to reach running state..."
+          aws ec2 wait instance-running --instance-ids ${{ secrets.EC2_INSTANCE_ID }}
+          echo "Instance is active and ready."
+
+  stop-ec2:
+    name: Stop EC2 Builder
+    needs: start-ec2
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Authenticate to AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Stop Instance
+        run: |
+          echo "Sending shutdown signal to EC2..."
+          aws ec2 stop-instances --instance-ids ${{ secrets.EC2_INSTANCE_ID }}
+          echo "Shutdown command issued."
