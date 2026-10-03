@@ -39,7 +39,7 @@ jobs:
 
   stop-ec2:
     name: Stop EC2 Builder
-    needs: execute-on-ec2 #UPDATED TO WAIT FOR THE NEW JOB
+    needs: execute-on-ec2 # UPDATED TO WAIT FOR THE NEW JOB
     if: always()
     runs-on: ubuntu-latest
     steps:
